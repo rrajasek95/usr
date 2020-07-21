@@ -42,7 +42,7 @@ except:
 
 from tqdm import tqdm, trange
 
-from transformers import (WEIGHTS_NAME, AdamW, WarmupLinearSchedule,
+from transformers import (WEIGHTS_NAME, AdamW,
                                   BertConfig, BertForMaskedLM, BertTokenizer,
                                   GPT2Config, GPT2LMHeadModel, GPT2Tokenizer,
                                   OpenAIGPTConfig, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer,
@@ -153,26 +153,26 @@ def _rotate_checkpoints(args, checkpoint_prefix, use_mtime=False):
 def mask_tokens_understandable(inputs, tokenizer, args):
     """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
     # Find length of last utterance by looking for _eos _go
-    #start = inputs.tolist()[0].index(366) + 1
+    start = inputs.tolist()[0].index(366) + 1
 
-    #inputs = inputs.repeat(inputs.size(1)-start-1, 1)
-    #labels = inputs.clone() * 0 - 1
-    #masked_indices = torch.arange(inputs.size(1))[start:-1].cuda()
-    #for i in range(inputs.size(1)-start-1):
-    #  labels[i, masked_indices[i]] = inputs[i, masked_indices[i]]
-    #  inputs[i, masked_indices[i]] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
-
-    #return inputs, labels
-
-    inputs = inputs.repeat(inputs.size(1)-2, 1)
-    labels = inputs.clone() * 0 - 1
-    
-    masked_indices = torch.arange(inputs.size(1))[1:-1].cuda()
-    for i in range(inputs.size(1)-2):
-      labels[i, masked_indices[i]] = inputs[i, masked_indices[i]]
-      inputs[i, masked_indices[i]] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+    inputs = inputs.repeat(inputs.size(1)-start-1, 1)
+    labels = inputs.clone() * 0 - 100
+    masked_indices = torch.arange(inputs.size(1))[start:-1].cuda()
+    for i in range(inputs.size(1)-start-1):
+     labels[i, masked_indices[i]] = inputs[i, masked_indices[i]]
+     inputs[i, masked_indices[i]] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
 
     return inputs, labels
+
+    # inputs = inputs.repeat(inputs.size(1)-2, 1)
+    # labels = inputs.clone() * 0 - 100
+    #
+    # masked_indices = torch.arange(inputs.size(1))[1:-1]
+    # for i in range(inputs.size(1)-2):
+    #   labels[i, masked_indices[i]] = inputs[i, masked_indices[i]]
+    #   inputs[i, masked_indices[i]] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+    #
+    # return inputs, labels
 
 def mask_tokens(inputs, tokenizer, args):
     """ Prepare masked tokens inputs/labels for masked language modeling: 80% MASK, 10% random, 10% original. """
@@ -358,11 +358,12 @@ def evaluate(args, model, tokenizer, prefix=""):
 
     eval_loss = eval_loss / nb_eval_steps
     perplexity = torch.exp(torch.tensor(eval_loss))
+
+    return scores
+
     #open("/home/shikib/alexa-prize-topical-chat-dataset/labels/mlm_roberta.scores", "w+").write(str(scores))
 
     #open("undr/mlm_roberta.scores", "w+").write(str(scores))
-    open("undr/pc_mlm_roberta.scores", "w+").write(str(scores))
-    quit()
 
     #result = {
     #    "perplexity": perplexity
