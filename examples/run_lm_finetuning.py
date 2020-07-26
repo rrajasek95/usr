@@ -344,16 +344,33 @@ def evaluate(args, model, tokenizer, prefix=""):
 
     scores = []
     for batch in tqdm(eval_dataloader, desc="Evaluating"):
-        inputs, labels = mask_tokens_understandable(batch, tokenizer, args) if args.mlm else (batch, batch)
+        # inputs, labels = mask_tokens_understandable(batch, tokenizer, args) if args.mlm else (batch, batch)
         #inputs, labels = mask_tokens(batch, tokenizer, args) if args.mlm else (batch, batch)
-        inputs = inputs.to(args.device)
-        labels = labels.to(args.device)
+        # inputs = inputs.to(args.device)
+        # labels = labels.to(args.device)
 
         with torch.no_grad():
-            outputs = model(inputs, masked_lm_labels=labels) if args.mlm else model(inputs, labels=labels)
-            lm_loss = outputs[0]
-            eval_loss += lm_loss.mean().item()
-            scores.append(-lm_loss.mean().item())
+            start = batch.tolist()[0].index(366) + 1
+            inputs = batch.clone()
+            # The original implementation of USR is too
+            # memory intensive. Optimize by unrolling the MLM operation
+            lm_loss = 0.
+            num_input_tokens = inputs.size(1) - start - 1
+            for i in range(inputs.size(1) - start - 1):
+                masked_input = inputs.clone()
+                labels = masked_input.clone() * 0 - 100
+
+                labels[0][i] = masked_input[0][i]
+                masked_input[0][i] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+
+                masked_input.to(args.device)
+                labels.to(args.device)
+
+                outputs = model(masked_input, masked_lm_labels=labels) if args.mlm else model(inputs, labels=labels)
+                lm_loss += outputs[0].sum().item()
+
+            eval_loss += lm_loss / num_input_tokens
+            scores.append(-lm_loss / num_input_tokens)
         nb_eval_steps += 1
 
     eval_loss = eval_loss / nb_eval_steps
