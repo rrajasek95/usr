@@ -363,7 +363,7 @@ def evaluate(args, model, tokenizer, prefix=""):
             for i in range(num_chunks):
                 num_val_in_chunk = min(chunk_size, num_values - i * chunk_size)
                 masked_input = inputs.repeat(num_val_in_chunk, 1)
-                labels = masked_input.clone() * 0 - 1
+                labels = masked_input.clone() * 0 - 100
 
                 for j in range(num_val_in_chunk):
                     labels[j, i * chunk_size + j] = masked_input[j, i * chunk_size + j]
