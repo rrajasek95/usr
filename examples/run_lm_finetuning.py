@@ -355,22 +355,26 @@ def evaluate(args, model, tokenizer, prefix=""):
             # The original implementation of USR is too
             # memory intensive. Optimize by unrolling the MLM operation
             lm_loss = 0.
-            num_input_tokens = inputs.size(1) - start - 1
-            for i in range(inputs.size(1) - start - 1):
-                masked_input = inputs.clone()
+            num_values = inputs.size(1) - start - 1
+            chunk_size = 8
+            num_chunks = ((num_values - 1) // chunk_size) + 1  # discounting by 1 allows us to cleanly calculate number of chunks
+            for i in range(num_chunks):
+                num_val_in_chunk = min(chunk_size, num_values - i * num_chunks)
+                masked_input = inputs.repeat(num_val_in_chunk)
                 labels = masked_input.clone() * 0 - 100
 
-                labels[0][i] = masked_input[0][i]
-                masked_input[0][i] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+                for j in range(num_val_in_chunk):
+                    labels[j, i * chunk_size + j] = masked_input[j, i * chunk_size + j]
+                    masked_input[j, i * chunk_size + j] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
 
-                masked_input.to(args.device)
-                labels.to(args.device)
+                masked_input = masked_input.to(args.device)
+                labels = labels.to(args.device)
 
                 outputs = model(masked_input, masked_lm_labels=labels) if args.mlm else model(inputs, labels=labels)
                 lm_loss += outputs[0].sum().item()
 
-            eval_loss += lm_loss / num_input_tokens
-            scores.append(-lm_loss / num_input_tokens)
+            eval_loss += lm_loss / num_values
+            scores.append(-lm_loss / num_values)
         nb_eval_steps += 1
 
     eval_loss = eval_loss / nb_eval_steps
