@@ -84,6 +84,8 @@ class TextDataset(Dataset):
 
             # TODO:  uncomment for inference
             for l in text.split('\n')[:-1]:
+              if l > 512:
+                  l = l[-512:]
               tokenized_l = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(l))
               self.examples.append(tokenizer.build_inputs_with_special_tokens(tokenized_l))
 
