@@ -354,7 +354,7 @@ def evaluate(args, model, tokenizer, prefix=""):
             # The original implementation of USR is too
             # memory intensive. Optimize by unrolling the MLM operation
             lm_loss = 0.
-            num_values = inputs.size(1) - 2 - 1
+            num_values = inputs.size(1) - 2
             chunk_size = max((16 * 500) // batch.shape[1], 1)
             num_chunks = ((num_values - 1) // chunk_size) + 1  # discounting by 1 allows us to cleanly calculate number of chunks
             for i in range(num_chunks):
