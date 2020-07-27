@@ -86,8 +86,8 @@ class TextDataset(Dataset):
             for l in text.split('\n')[:-1]:
               tokenized_l = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(l))
 
-              if len(tokenized_l) > 500:
-                  tokenized_l = tokenized_l[-500:]
+              if len(tokenized_l) > 100:
+                  tokenized_l = tokenized_l[-100:]
               self.examples.append(tokenizer.build_inputs_with_special_tokens(tokenized_l))
 
 
