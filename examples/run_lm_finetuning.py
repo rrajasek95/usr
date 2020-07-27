@@ -357,7 +357,9 @@ def evaluate(args, model, tokenizer, prefix=""):
             # The original implementation of USR is too
             # memory intensive. Optimize by unrolling the MLM operation
             lm_loss = 0.
-            num_values = inputs.size(1) - 2
+            start = inputs.tolist()[0].index(366) + 1
+            num_values = inputs.shape[1] - start + 1
+
             chunk_size = max((16 * 500) // batch.shape[1], 1)
             num_chunks = ((num_values - 1) // chunk_size) + 1  # discounting by 1 allows us to cleanly calculate number of chunks
             for i in range(num_chunks):
@@ -366,8 +368,8 @@ def evaluate(args, model, tokenizer, prefix=""):
                 labels = masked_input.clone() * 0 - 100
 
                 for j in range(num_val_in_chunk):
-                    labels[j, i * chunk_size + j] = masked_input[j, i * chunk_size + j]
-                    masked_input[j, i * chunk_size + j] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
+                    labels[j, i * chunk_size + j + start] = masked_input[j, i * chunk_size + j + start]
+                    masked_input[j, i * chunk_size + j + start] = tokenizer.convert_tokens_to_ids(tokenizer.mask_token)
 
                 masked_input = masked_input.to(args.device)
                 labels = labels.to(args.device)
