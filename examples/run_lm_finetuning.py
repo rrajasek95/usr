@@ -356,11 +356,11 @@ def evaluate(args, model, tokenizer, prefix=""):
             # memory intensive. Optimize by unrolling the MLM operation
             lm_loss = 0.
             num_values = inputs.size(1) - start - 1
-            chunk_size = 8
+            chunk_size = max((16 * 500) // batch.shape[1], 1)
             num_chunks = ((num_values - 1) // chunk_size) + 1  # discounting by 1 allows us to cleanly calculate number of chunks
             for i in range(num_chunks):
-                num_val_in_chunk = min(chunk_size, num_values - i * num_chunks)
-                masked_input = inputs.repeat(num_val_in_chunk)
+                num_val_in_chunk = min(chunk_size, num_values - i * chunk_size)
+                masked_input = inputs.repeat(num_val_in_chunk, 1)
                 labels = masked_input.clone() * 0 - 100
 
                 for j in range(num_val_in_chunk):
